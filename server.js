@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
+const serverless = require('serverless-http');
 const connectDB = require('./config/database');
 
 // Import routes
@@ -23,7 +23,6 @@ const newsletterRoutes = require('./routes/newsletter');
 connectDB();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
@@ -74,21 +73,14 @@ app.use('/api/*', (req, res) => {
 });
 
 // Serve static files from the React app in production (must come last)
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/dist')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+if For local development only
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🔗 API available at http://localhost:${PORT}/api`);
   });
 }
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🔗 API available at http://localhost:${PORT}/api`);
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`🔗 React dev server should be running on http://localhost:5173`);
-  }
-});
-
-module.exports = app;
+// Export for Vercel serverless deployment
+module.exports = serverless(app)
