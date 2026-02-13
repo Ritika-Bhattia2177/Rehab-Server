@@ -15,8 +15,13 @@ module.exports = async (req, res) => {
   }
   
   try {
-    // Connect to database
+    // Connect to database and wait for connection
     await connectDB();
+    
+    // Ensure connection is ready
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error('Database not connected');
+    }
     
     // Get or create Centers collection
     const Center = mongoose.models.Center || mongoose.model('Center', new mongoose.Schema({
@@ -36,7 +41,7 @@ module.exports = async (req, res) => {
       image: String,
       facilities: [String],
       price: String
-    }, { collection: 'centers' }));
+    }, { collection: 'centers', bufferCommands: false }));
     
     if (req.method === 'GET') {
       // Get query parameters
