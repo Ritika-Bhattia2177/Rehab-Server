@@ -19,15 +19,24 @@ const inquiriesRoutes = require('./routes/inquiries');
 const consultationsRoutes = require('./routes/consultations');
 const newsletterRoutes = require('./routes/newsletter');
 
-// Connect to MongoDB
-connectDB();
-
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Connect to MongoDB on first request (serverless-friendly)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('Database connection error:', error);
+    // Continue anyway - some routes might not need DB
+    next();
+  }
+});
 
 // Root route - Backend status
 app.get('/', (req, res) => {
@@ -49,7 +58,10 @@ app.get('/', (req, res) => {
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'HopePath Recovery API is running' });
+  res.json({
+    status: 'ok',
+    message: 'HopePath Recovery API is running'
+  });
 });
 
 // API Routes
@@ -67,13 +79,16 @@ app.use('/api/inquiries', inquiriesRoutes);
 app.use('/api/consultations', consultationsRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 
-// 404 handler for API routes (must come after all API routes)
+// 404 handler for API routes
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: 'API endpoint not found' });
 });
 
-// Serve static files from the React app in production (must come last)
-if For local development only
+/*
+ ✅ IMPORTANT LOGIC:
+ - On Vercel → serverless export is used
+ - On Localhost → app.listen() runs
+*/
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
@@ -82,5 +97,5 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Export for Vercel serverless deployment
-module.exports = serverless(app)
+// ⭐ MOST IMPORTANT FOR VERCEL (DO NOT REMOVE)
+module.exports = serverless(app);
