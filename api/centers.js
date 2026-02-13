@@ -35,8 +35,10 @@ module.exports = async (req, res) => {
       
       let centers = await Center.find({});
       
-      // If no centers, seed with sample data
-      if (centers.length === 0 && centersData && centersData.length > 0) {
+      // If no centers or missing Indian centers, seed/update with sample data
+      if (centers.length < 18 && centersData && centersData.length > 0) {
+        // Clear old data and insert fresh data
+        await Center.deleteMany({});
         await Center.insertMany(centersData);
         centers = await Center.find({});
       }
