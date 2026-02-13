@@ -46,25 +46,31 @@ module.exports = async (req, res) => {
     
     if (req.method === 'GET') {
       // Get query parameters
-      const { location, city, state, reseed } = req.query;
+      const { location, city, state, cleanup } = req.query;
+      
+      // Special cleanup mode to fix database issues
+      if (cleanup === 'true') {
+        await Center.deleteMany({});
+        if (centersData && centersData.length > 0) {
+          await Center.insertMany(centersData);
+        }
+        return res.status(200).json({
+          success: true,
+          message: 'Database cleaned and reseeded',
+          count: centersData.length
+        });
+      }
       
       let centers = await Center.find({});
       
-      // Check if data needs updating (missing centers or incomplete data)
-      const needsUpdate = centers.length < 18 || 
-                          centers.some(c => !c.id || !c.image || !c.city || !c.state || !c.treatmentTypes || c.treatmentTypes.length === 0);
-      
-      // If needs update and we have sample data, upsert data (preserves _id)
-      if (needsUpdate && centersData && centersData.length > 0) {
-        // Upsert each center by id field - this preserves MongoDB _id
-        for (const centerData of centersData) {
-          await Center.findOneAndUpdate(
-            { id: centerData.id }, // Find by sequential id
-            centerData, // Update with new data
-            { upsert: true, new: true } // Create if doesn't exist
-          );
-        }
+      // Only seed if database is completely empty
+      // This preserves MongoDB _id values after first insert
+      if (centers.length === 0 && centersData && centersData.length > 0) {
+        await Center.insertMany(centersData);
         centers = await Center.find({}).sort({ id: 1 });
+      } else if (centers.length > 0) {
+        // Return existing data sorted by sequential id
+        centers = centers.sort((a, b) => (a.id || 0) - (b.id || 0));
       }
       
       // Filter by location if provided
