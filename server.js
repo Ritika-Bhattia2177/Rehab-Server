@@ -12,6 +12,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Root route - Backend status
 app.get('/', (req, res) => {
+  console.log('Root route accessed');
   res.status(200).json({
     status: 'success',
     message: '🚀 HopePath Recovery Backend is Running Successfully!',
@@ -25,7 +26,9 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       blogs: '/api/blogs',
       resources: '/api/resources'
-    }
+    },
+    environment: process.env.NODE_ENV || 'development',
+    mongodbConfigured: !!process.env.MONGODB_URI
   });
 });
 
