@@ -50,7 +50,14 @@ const initDBMiddleware = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('DB connection error:', error.message);
-    next(); // Continue even if DB fails
+    // Return error response if this is an API call that requires DB
+    if (req.path.includes('/api/')) {
+      return res.status(503).json({
+        error: 'Database connection unavailable',
+        message: error.message
+      });
+    }
+    next();
   }
 };
 
