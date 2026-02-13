@@ -16,11 +16,19 @@ module.exports = async (req, res) => {
     
     if (req.method === 'GET') {
       const testimonials = await Testimonial.find({}).sort({ date: -1 });
-      res.status(200).json(testimonials);
+      res.status(200).json({
+        success: true,
+        count: testimonials.length,
+        data: testimonials
+      });
     } else if (req.method === 'POST') {
       const testimonial = new Testimonial(req.body);
       await testimonial.save();
-      res.status(201).json(testimonial);
+      res.status(201).json({
+        success: true,
+        message: 'Testimonial added successfully',
+        data: testimonial
+      });
     } else {
       res.status(405).json({ error: 'Method not allowed' });
     }

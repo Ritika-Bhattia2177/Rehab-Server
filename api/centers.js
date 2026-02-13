@@ -12,25 +12,66 @@ module.exports = async (req, res) => {
     // Get or create Centers collection
     const Center = mongoose.models.Center || mongoose.model('Center', new mongoose.Schema({
       name: String,
+      city: String,
+      state: String,
       location: String,
       description: String,
       rating: Number,
+      reviews: Number,
+      beds: Number,
+      specialties: [String],
+      treatmentTypes: [String],
+      isPremium: Boolean,
+      isVerified: Boolean,
+      acceptsInsurance: Boolean,
       image: String,
       facilities: [String],
       price: String
     }, { collection: 'centers' }));
     
     if (req.method === 'GET') {
-      const centers = await Center.find({});
+      // Get query parameters
+      const { location, city, state } = req.query;
+      
+      let centers = await Center.find({});
       
       // If no centers, seed with sample data
       if (centers.length === 0 && centersData && centersData.length > 0) {
         await Center.insertMany(centersData);
-        const newCenters = await Center.find({});
-        return res.status(200).json(newCenters);
+        centers = await Center.find({});
       }
       
-      res.status(200).json(centers);
+      // Filter by location if provided
+      if (location) {
+        const searchTerm = location.toLowerCase();
+        centers = centers.filter(center => {
+          const locationMatch = center.location?.toLowerCase().includes(searchTerm);
+          const cityMatch = center.city?.toLowerCase().includes(searchTerm);
+          const stateMatch = center.state?.toLowerCase().includes(searchTerm);
+          const nameMatch = center.name?.toLowerCase().includes(searchTerm);
+          return locationMatch || cityMatch || stateMatch || nameMatch;
+        });
+      }
+      
+      // Filter by city if provided
+      if (city) {
+        centers = centers.filter(center => 
+          center.city?.toLowerCase().includes(city.toLowerCase())
+        );
+      }
+      
+      // Filter by state if provided
+      if (state) {
+        centers = centers.filter(center => 
+          center.state?.toLowerCase().includes(state.toLowerCase())
+        );
+      }
+      
+      res.status(200).json({
+        success: true,
+        count: centers.length,
+        data: centers
+      });
     } else {
       res.status(405).json({ error: 'Method not allowed' });
     }
