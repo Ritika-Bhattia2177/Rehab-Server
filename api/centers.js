@@ -45,12 +45,17 @@ module.exports = async (req, res) => {
     
     if (req.method === 'GET') {
       // Get query parameters
-      const { location, city, state } = req.query;
+      const { location, city, state, reseed } = req.query;
       
       let centers = await Center.find({});
       
-      // If no centers or missing Indian centers, seed/update with sample data
-      if (centers.length < 18 && centersData && centersData.length > 0) {
+      // Check if data needs updating (missing centers, incomplete data, or forced reseed)
+      const needsUpdate = centers.length < 18 || 
+                          centers.some(c => !c.image || !c.city || !c.state || !c.treatmentTypes || c.treatmentTypes.length === 0) ||
+                          reseed === 'true';
+      
+      // If needs update and we have sample data, reseed
+      if (needsUpdate && centersData && centersData.length > 0) {
         // Clear old data and insert fresh data
         await Center.deleteMany({});
         await Center.insertMany(centersData);
