@@ -25,6 +25,7 @@ module.exports = async (req, res) => {
     
     // Get or create Centers collection
     const Center = mongoose.models.Center || mongoose.model('Center', new mongoose.Schema({
+      id: { type: Number, unique: true, required: true },
       name: String,
       city: String,
       state: String,
@@ -49,17 +50,21 @@ module.exports = async (req, res) => {
       
       let centers = await Center.find({});
       
-      // Check if data needs updating (missing centers, incomplete data, or forced reseed)
+      // Check if data needs updating (missing centers or incomplete data)
       const needsUpdate = centers.length < 18 || 
-                          centers.some(c => !c.image || !c.city || !c.state || !c.treatmentTypes || c.treatmentTypes.length === 0) ||
-                          reseed === 'true';
+                          centers.some(c => !c.id || !c.image || !c.city || !c.state || !c.treatmentTypes || c.treatmentTypes.length === 0);
       
-      // If needs update and we have sample data, reseed
+      // If needs update and we have sample data, upsert data (preserves _id)
       if (needsUpdate && centersData && centersData.length > 0) {
-        // Clear old data and insert fresh data
-        await Center.deleteMany({});
-        await Center.insertMany(centersData);
-        centers = await Center.find({});
+        // Upsert each center by id field - this preserves MongoDB _id
+        for (const centerData of centersData) {
+          await Center.findOneAndUpdate(
+            { id: centerData.id }, // Find by sequential id
+            centerData, // Update with new data
+            { upsert: true, new: true } // Create if doesn't exist
+          );
+        }
+        centers = await Center.find({}).sort({ id: 1 });
       }
       
       // Filter by location if provided
